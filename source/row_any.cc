@@ -239,6 +239,43 @@ ANY41PT(MergeARGB16To8Row_Any_NEON,
 
 #undef ANY41PT
 
+#define ANY2W1_T(NAMEANY, ANY_SIMD, UVSHIFT, DUVSHIFT, BPP, MASK, TYPE) \
+  void NAMEANY(const TYPE* y_buf, const TYPE* u_buf,                    \
+               TYPE val, TYPE* dst_ptr, int width) {                    \
+    SIMD_ALIGNED(TYPE temp[64 * 3]);                                    \
+    memset(temp, 0, sizeof(temp)); /* for YUY2 and msan */              \
+    int r = width & MASK;                                               \
+    int n = width & ~MASK;                                              \
+    if (n > 0) {                                                        \
+      ANY_SIMD(y_buf, u_buf, val, dst_ptr, n);                          \
+    }                                                                   \
+    memcpy(temp, y_buf + n, r * BPP);                                   \
+    memcpy(temp + 64, u_buf + (n >> UVSHIFT), SS(r, UVSHIFT) * BPP);    \
+    ANY_SIMD(temp, temp + 64, val, temp + 128, MASK + 1);               \
+    memcpy(dst_ptr + (n >> DUVSHIFT), temp + 128,                       \
+           SS(r, DUVSHIFT) * BPP);                                      \
+  }
+
+// Any 3 planes to 1.
+// Any 3 planes to 1.
+#define ANY31_T(NAMEANY, ANY_SIMD, UVSHIFT, DUVSHIFT, BPP, MASK, TYPE)  \
+  void NAMEANY(const TYPE* y_buf, const TYPE* u_buf,                    \
+               const TYPE* v_buf, TYPE* dst_ptr, int width) {           \
+    SIMD_ALIGNED(TYPE temp[64 * 4]);                                    \
+    memset(temp, 0, sizeof(temp)); /* for YUY2 and msan */              \
+    int r = width & MASK;                                               \
+    int n = width & ~MASK;                                              \
+    if (n > 0) {                                                        \
+      ANY_SIMD(y_buf, u_buf, v_buf, dst_ptr, n);                        \
+    }                                                                   \
+    memcpy(temp, y_buf + n, r * BPP);                                   \
+    memcpy(temp + 64, u_buf + (n >> UVSHIFT), SS(r, UVSHIFT) * BPP);    \
+    memcpy(temp + 128, v_buf + (n >> UVSHIFT), SS(r, UVSHIFT) * BPP);   \
+    ANY_SIMD(temp, temp + 64, temp + 128, temp + 192, MASK + 1);        \
+    memcpy(dst_ptr + (n >> DUVSHIFT), temp + 192,                       \
+           SS(r, DUVSHIFT) * BPP);                                      \
+  }
+
 // Any 3 planes to 1.
 #define ANY31(NAMEANY, ANY_SIMD, UVSHIFT, DUVSHIFT, BPP, MASK)      \
   void NAMEANY(const uint8_t* y_buf, const uint8_t* u_buf,          \
@@ -305,6 +342,11 @@ ANY31(I422ToUYVYRow_Any_MMI, I422ToUYVYRow_MMI, 1, 1, 4, 7)
 #endif
 #ifdef HAS_BLENDPLANEROW_AVX2
 ANY31(BlendPlaneRow_Any_AVX2, BlendPlaneRow_AVX2, 0, 0, 1, 31)
+ANY2W1_T(BlendPlaneRowW_Any_AVX2, BlendPlaneRowW_AVX2, 0, 0, 1, 31, uint8_t)
+#endif
+#ifdef HAS_BLENDPLANEROW_16_AVX2
+ANY2W1_T(BlendPlaneRowW_16_Any_AVX2, BlendPlaneRowW_16_AVX2, 0, 0, 2, 15, uint16_t)
+ANY31_T(BlendPlaneRow_16_Any_AVX2, BlendPlaneRow_16_AVX2, 0, 0, 2, 15, uint16_t)
 #endif
 #ifdef HAS_BLENDPLANEROW_SSSE3
 ANY31(BlendPlaneRow_Any_SSSE3, BlendPlaneRow_SSSE3, 0, 0, 1, 7)

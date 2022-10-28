@@ -6910,7 +6910,179 @@ void BlendPlaneRow_AVX2(const uint8_t* src0,
         "cc", "eax", "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6",
         "xmm7");
 }
+
+void BlendPlaneRowW_AVX2(const uint8_t* src0,
+                        const uint8_t* src1,
+                        uint8_t alpha,
+                        uint8_t* dst,
+                        int width) {
+    asm volatile(
+        "movb        %2,%%al                       \n"
+        "movb        %2,%%ah                       \n"
+        "xorw        $0xff00,%%ax                  \n"
+        "shl         $0x10,%%eax                   \n"
+        "movb        %2,%%al                       \n"
+        "movb        %2,%%ah                       \n"
+        "xorw        $0xff00,%%ax                  \n"
+        "vmovd       %%eax,%%xmm5                  \n"
+        "vbroadcastss %%xmm5,%%ymm5                \n"
+        "mov         $0x80808080,%%eax             \n"
+        "vmovd       %%eax,%%xmm6                  \n"
+        "vbroadcastss %%xmm6,%%ymm6                \n"
+        "mov         $0x807f807f,%%eax             \n"
+        "vmovd       %%eax,%%xmm7                  \n"
+        "vbroadcastss %%xmm7,%%ymm7                \n"
+        "sub         %3,%0                         \n"
+        "sub         %3,%1                         \n"
+
+        // 32 pixel loop.
+        LABELALIGN
+        "1:                                        \n"
+        "vmovdqu     (%0,%3,1),%%ymm1              \n"
+        "vmovdqu     (%1,%3,1),%%ymm2              \n"
+        "vpunpckhbw  %%ymm2,%%ymm1,%%ymm4          \n"
+        "vpunpcklbw  %%ymm2,%%ymm1,%%ymm1          \n"
+        "vpsubb      %%ymm6,%%ymm4,%%ymm4          \n"
+        "vpsubb      %%ymm6,%%ymm1,%%ymm1          \n"
+        "vpmaddubsw  %%ymm4,%%ymm5,%%ymm3          \n"
+        "vpmaddubsw  %%ymm1,%%ymm5,%%ymm0          \n"
+        "vpaddw      %%ymm7,%%ymm3,%%ymm3          \n"
+        "vpaddw      %%ymm7,%%ymm0,%%ymm0          \n"
+        "vpsrlw      $0x8,%%ymm3,%%ymm3            \n"
+        "vpsrlw      $0x8,%%ymm0,%%ymm0            \n"
+        "vpackuswb   %%ymm3,%%ymm0,%%ymm0          \n"
+        "vmovdqu     %%ymm0,(%3)                   \n"
+        "lea         0x20(%3),%3                   \n"
+        "sub         $0x20,%4                      \n"
+        "jg          1b                            \n"
+        "vzeroupper                                \n"
+        : "+r"(src0),   // %0
+        "+r"(src1),   // %1
+        "+r"(alpha),  // %2
+        "+r"(dst),    // %3
+        "+rm"(width)  // %4
+        ::"memory",
+        "cc", "eax", "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6",
+        "xmm7");
+}
 #endif  // HAS_BLENDPLANEROW_AVX2
+
+#ifdef HAS_BLENDPLANEROW_16_AVX2
+// Blend 16 pixels at a time.
+// unsigned version of math
+// =((A2*C2)+(B2*(65535-C2))+65535)/65536
+// signed version of math
+// =(((A2-32768)*C2)+((B2-32768)*(32767-C2))+1073709056+32767)/32768
+
+void BlendPlaneRow_16_AVX2(const uint16_t* src0,
+                                const uint16_t* src1,
+                                const uint16_t* alpha,
+                                uint16_t* dst,
+                                int width) {
+    asm volatile(
+        "mov         $0x7fff0000,%%eax             \n"
+        "vmovd       %%eax,%%xmm5                  \n"
+        "vbroadcastss %%xmm5,%%ymm5                \n"
+        "mov         $0x80008000,%%eax             \n"
+        "vmovd       %%eax,%%xmm6                  \n"
+        "vbroadcastss %%xmm6,%%ymm6                \n"
+        "mov         $0x3fffffff,%%eax             \n"
+        "vmovd       %%eax,%%xmm7                  \n"
+        "vbroadcastss %%xmm7,%%ymm7                \n"
+        "sub         %2,%0                         \n"
+        "sub         %2,%1                         \n"
+        "sub         %2,%3                         \n"
+
+        // 16 pixel loop.
+        LABELALIGN
+        "1:                                        \n"
+        "vmovdqu     (%2),%%ymm0                   \n"
+        "vpsrlw      $0x1,%%ymm0,%%ymm0            \n"
+        "vpunpckhwd  %%ymm0,%%ymm0,%%ymm3          \n"
+        "vpunpcklwd  %%ymm0,%%ymm0,%%ymm0          \n"
+        "vpxor       %%ymm5,%%ymm3,%%ymm3          \n"
+        "vpxor       %%ymm5,%%ymm0,%%ymm0          \n"
+        "vmovdqu     (%0,%2,1),%%ymm1              \n"
+        "vmovdqu     (%1,%2,1),%%ymm2              \n"
+        "vpunpckhwd  %%ymm2,%%ymm1,%%ymm4          \n"
+        "vpunpcklwd  %%ymm2,%%ymm1,%%ymm1          \n"
+        "vpsubw      %%ymm6,%%ymm4,%%ymm4          \n"
+        "vpsubw      %%ymm6,%%ymm1,%%ymm1          \n"
+        "vpmaddwd    %%ymm4,%%ymm3,%%ymm3          \n"
+        "vpmaddwd    %%ymm1,%%ymm0,%%ymm0          \n"
+        "vpaddd      %%ymm7,%%ymm3,%%ymm3          \n"
+        "vpaddd      %%ymm7,%%ymm0,%%ymm0          \n"
+        "vpsrld      $0xf,%%ymm3,%%ymm3            \n"
+        "vpsrld      $0xf,%%ymm0,%%ymm0            \n"
+        "vpackusdw   %%ymm3,%%ymm0,%%ymm0          \n"
+        "vmovdqu     %%ymm0,(%3,%2,1)              \n"
+        "lea         0x20(%2),%2                   \n"
+        "sub         $0x10,%4                      \n"
+        "jg          1b                            \n"
+        "vzeroupper                                \n"
+        : "+r"(src0),   // %0
+        "+r"(src1),   // %1
+        "+r"(alpha),  // %2
+        "+r"(dst),    // %3
+        "+rm"(width)  // %4
+        ::"memory",
+        "cc", "eax", "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6",
+        "xmm7");
+}
+
+void BlendPlaneRowW_16_AVX2(const uint16_t* src0,
+                        const uint16_t* src1,
+                        uint16_t alpha,
+                        uint16_t* dst,
+                        int width) {
+  asm volatile(
+      "shr         $0x1,%2                       \n"
+      "movw        %2,%%ax                       \n"
+      "shl         $0x10,%%eax                   \n"
+      "orw         %2,%%ax                       \n"
+      "xor         $0x7fff0000,%%eax             \n"
+      "vmovd       %%eax,%%xmm5                  \n"
+      "vbroadcastss %%xmm5,%%ymm5                \n"
+      "mov         $0x80008000,%%eax             \n"
+      "vmovd       %%eax,%%xmm6                  \n"
+      "vbroadcastss %%xmm6,%%ymm6                \n"
+      "mov         $0x3fffffff,%%eax             \n"
+      "vmovd       %%eax,%%xmm7                  \n"
+      "vbroadcastss %%xmm7,%%ymm7                \n"
+      "sub         %3,%0                         \n"
+      "sub         %3,%1                         \n"
+
+      // 16 pixel loop.
+      LABELALIGN
+      "1:                                        \n"
+      "vmovdqu     (%0,%3,1),%%ymm1              \n"
+      "vmovdqu     (%1,%3,1),%%ymm2              \n"
+      "vpunpckhwd  %%ymm2,%%ymm1,%%ymm4          \n"
+      "vpunpcklwd  %%ymm2,%%ymm1,%%ymm1          \n"
+      "vpsubw      %%ymm6,%%ymm4,%%ymm4          \n"
+      "vpsubw      %%ymm6,%%ymm1,%%ymm1          \n"
+      "vpmaddwd    %%ymm4,%%ymm5,%%ymm3          \n"
+      "vpmaddwd    %%ymm1,%%ymm5,%%ymm0          \n"
+      "vpaddd      %%ymm7,%%ymm3,%%ymm3          \n"
+      "vpaddd      %%ymm7,%%ymm0,%%ymm0          \n"
+      "vpsrld      $0xf,%%ymm3,%%ymm3            \n"
+      "vpsrld      $0xf,%%ymm0,%%ymm0            \n"
+      "vpackusdw   %%ymm3,%%ymm0,%%ymm0          \n"
+      "vmovdqu     %%ymm0,(%3)                   \n"
+      "lea         0x20(%3),%3                   \n"
+      "sub         $0x10,%4                      \n"
+      "jg          1b                            \n"
+      "vzeroupper                                \n"
+      : "+r"(src0),   // %0
+        "+r"(src1),   // %1
+        "+r"(alpha),  // %2
+        "+r"(dst),    // %3
+        "+rm"(width)  // %4
+        ::"memory",
+        "cc", "eax", "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6",
+        "xmm7");
+}
+#endif  // HAS_BLENDPLANEROW_16_AVX2
 
 #ifdef HAS_ARGBATTENUATEROW_SSSE3
 // Shuffle table duplicating alpha.

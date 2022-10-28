@@ -22,6 +22,33 @@ extern "C" {
 
 // Fixed scale down.
 // Mask may be non-power of 2, so use MOD
+#define SDANY_T(NAMEANY, SCALEROWDOWN_SIMD, SCALEROWDOWN_C, FACTOR, BPP, MASK, TYPE)   \
+  void NAMEANY(const TYPE* src_ptr, ptrdiff_t src_stride, TYPE* dst_ptr, \
+               int dst_width) {                                                \
+    int r = (int)((unsigned int)dst_width % (MASK + 1)); /* NOLINT */          \
+    int n = dst_width - r;                                                     \
+    if (n > 0) {                                                               \
+      SCALEROWDOWN_SIMD(src_ptr, src_stride, dst_ptr, n);                      \
+    }                                                                          \
+    SCALEROWDOWN_C(src_ptr + (n * FACTOR) * BPP, src_stride,                   \
+                   dst_ptr + n * BPP, r);                                      \
+  }
+
+// Fixed scale down for odd source width.  Used by I420Blend subsampling.
+// Since dst_width is (width + 1) / 2, this function scales one less pixel
+// and copies the last pixel.
+#define SDODD_T(NAMEANY, SCALEROWDOWN_SIMD, SCALEROWDOWN_C, FACTOR, BPP, MASK, TYPE)   \
+  void NAMEANY(const TYPE* src_ptr, ptrdiff_t src_stride, TYPE* dst_ptr, \
+               int dst_width) {                                                \
+    int r = (int)((unsigned int)(dst_width - 1) % (MASK + 1)); /* NOLINT */    \
+    int n = (dst_width - 1) - r;                                               \
+    if (n > 0) {                                                               \
+      SCALEROWDOWN_SIMD(src_ptr, src_stride, dst_ptr, n);                      \
+    }                                                                          \
+    SCALEROWDOWN_C(src_ptr + (n * FACTOR) * BPP, src_stride,                   \
+                   dst_ptr + n * BPP, r + 1);                                  \
+  }
+
 #define SDANY(NAMEANY, SCALEROWDOWN_SIMD, SCALEROWDOWN_C, FACTOR, BPP, MASK)   \
   void NAMEANY(const uint8_t* src_ptr, ptrdiff_t src_stride, uint8_t* dst_ptr, \
                int dst_width) {                                                \
@@ -106,6 +133,22 @@ SDODD(ScaleRowDown2Box_Odd_AVX2,
       2,
       1,
       31)
+#endif
+#ifdef HAS_SCALEROWDOWN2_16_AVX2
+SDANY_T(ScaleRowDown2Box_16_Any_AVX2,
+    ScaleRowDown2Box_16_AVX2,
+    ScaleRowDown2Box_16_C,
+    2,
+    1,
+    15,
+    uint16_t)
+SDODD_T(ScaleRowDown2Box_16_Odd_AVX2,
+    ScaleRowDown2Box_16_AVX2,
+    ScaleRowDown2Box_16_Odd_C,
+    2,
+    1,
+    15,
+    uint16_t)
 #endif
 #ifdef HAS_SCALEROWDOWN2_NEON
 SDANY(ScaleRowDown2_Any_NEON, ScaleRowDown2_NEON, ScaleRowDown2_C, 2, 1, 15)

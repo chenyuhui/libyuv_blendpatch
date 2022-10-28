@@ -293,6 +293,51 @@ void ScaleRowDown2Box_AVX2(const uint8_t* src_ptr,
 }
 #endif  // HAS_SCALEROWDOWN2_AVX2
 
+#ifdef HAS_SCALEROWDOWN2_16_AVX2
+void ScaleRowDown2Box_16_AVX2(const uint16_t* src_ptr,
+                                ptrdiff_t src_stride,
+                                uint16_t* dst_ptr,
+                                int dst_width) {
+    asm volatile(
+        "vpcmpeqb    %%ymm4,%%ymm4,%%ymm4          \n"
+        "vpsrlw      $0xf,%%ymm4,%%ymm4            \n"
+        "vpxor       %%ymm5,%%ymm5,%%ymm5          \n"
+        "mov         $0x2,%%eax                    \n"
+        "vmovd       %%eax,%%xmm6                  \n"
+        "vbroadcastss %%xmm6,%%ymm6                \n"
+
+        LABELALIGN
+        "1:                                        \n"
+        "vmovdqu     (%0),%%ymm0                   \n"
+        "vmovdqu     0x20(%0),%%ymm1               \n"
+        "vmovdqu     0x00(%0,%3,2),%%ymm2          \n"
+        "vmovdqu     0x20(%0,%3,2),%%ymm3          \n"
+        "lea         0x40(%0),%0                   \n"
+        "vpmaddwd    %%ymm4,%%ymm0,%%ymm0          \n"
+        "vpmaddwd    %%ymm4,%%ymm1,%%ymm1          \n"
+        "vpmaddwd    %%ymm4,%%ymm2,%%ymm2          \n"
+        "vpmaddwd    %%ymm4,%%ymm3,%%ymm3          \n"
+        "vpaddd      %%ymm2,%%ymm0,%%ymm0          \n"
+        "vpaddd      %%ymm3,%%ymm1,%%ymm1          \n"
+        "vpaddd      %%ymm6,%%ymm0,%%ymm0          \n"
+        "vpaddd      %%ymm6,%%ymm1,%%ymm1          \n"
+        "vpsrld      $0x2,%%ymm0,%%ymm0            \n"
+        "vpsrld      $0x2,%%ymm1,%%ymm1            \n"
+        "vpackusdw   %%ymm1,%%ymm0,%%ymm0          \n"
+        "vpermq      $0xd8,%%ymm0,%%ymm0           \n"
+        "vmovdqu     %%ymm0,(%1)                   \n"
+        "lea         0x20(%1),%1                   \n"
+        "sub         $0x10,%2                      \n"
+        "jg          1b                            \n"
+        "vzeroupper                                \n"
+        : "+r"(src_ptr),               // %0
+        "+r"(dst_ptr),               // %1
+        "+r"(dst_width)              // %2
+        : "r"((intptr_t)(src_stride))  // %3
+        : "memory", "cc", "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6");
+}
+#endif  // HAS_SCALEROWDOWN2_16_AVX2
+
 void ScaleRowDown4_SSSE3(const uint8_t* src_ptr,
                          ptrdiff_t src_stride,
                          uint8_t* dst_ptr,

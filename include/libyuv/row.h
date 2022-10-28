@@ -235,6 +235,7 @@ extern "C" {
 #define HAS_ARGBSUBTRACTROW_AVX2
 #define HAS_ARGBUNATTENUATEROW_AVX2
 #define HAS_BLENDPLANEROW_AVX2
+#define HAS_BLENDPLANEROW_16_AVX2
 
 #if defined(__x86_64__) || !defined(__pic__) || defined(__clang__) || \
     defined(_MSC_VER)
@@ -3728,9 +3729,29 @@ void BlendPlaneRow_AVX2(const uint8_t* src0,
                         const uint8_t* alpha,
                         uint8_t* dst,
                         int width);
+void BlendPlaneRowW_AVX2(const uint8_t* src0,
+                        const uint8_t* src1,
+                        uint8_t alpha,
+                        uint8_t* dst,
+                        int width);
+void BlendPlaneRow_16_AVX2(const uint16_t* src0,
+                            const uint16_t* src1,
+                            const uint16_t* alpha,
+                            uint16_t* dst,
+                            int width);
+void BlendPlaneRowW_16_AVX2(const uint16_t* src0,
+                            const uint16_t* src1,
+                            uint16_t alpha,
+                            uint16_t* dst,
+                            int width);
 void BlendPlaneRow_Any_AVX2(const uint8_t* y_buf,
                             const uint8_t* u_buf,
                             const uint8_t* v_buf,
+                            uint8_t* dst_ptr,
+                            int width);
+void BlendPlaneRowW_Any_AVX2(const uint8_t* y_buf,
+                            const uint8_t* u_buf,
+                            uint8_t alpha,
                             uint8_t* dst_ptr,
                             int width);
 void BlendPlaneRow_MMI(const uint8_t* src0,
@@ -3748,6 +3769,31 @@ void BlendPlaneRow_C(const uint8_t* src0,
                      const uint8_t* alpha,
                      uint8_t* dst,
                      int width);
+void BlendPlaneRowW_C(const uint8_t* src0,
+                        const uint8_t* src1,
+                        uint8_t alpha,
+                        uint8_t* dst,
+                        int width);
+void BlendPlaneRow_16_C(const uint16_t* src0,
+                        const uint16_t* src1,
+                        const uint16_t* alpha,
+                        uint16_t* dst,
+                        int width);
+void BlendPlaneRowW_16_C(const uint16_t* src0,
+                        const uint16_t* src1,
+                        uint16_t alpha,
+                        uint16_t* dst,
+                        int width);
+void BlendPlaneRow_16_Any_AVX2(const uint16_t* y_buf,
+                                const uint16_t* u_buf,
+                                const uint16_t* v_buf,
+                                uint16_t* dst_ptr,
+                                int width);
+void BlendPlaneRowW_16_Any_AVX2(const uint16_t* y_buf,
+                                const uint16_t* u_buf,
+                                uint16_t v_buf,
+                                uint16_t* dst_ptr,
+                                int width);
 
 // ARGB multiply images. Same API as Blend, but these require
 // pointer and width alignment for SSE2.

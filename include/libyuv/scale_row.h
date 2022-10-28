@@ -118,6 +118,7 @@ extern "C" {
      defined(GCC_HAS_AVX2))
 #define HAS_SCALEADDROW_AVX2
 #define HAS_SCALEROWDOWN2_AVX2
+#define HAS_SCALEROWDOWN2_16_AVX2
 #define HAS_SCALEROWDOWN4_AVX2
 #endif
 
@@ -271,6 +272,10 @@ void ScaleRowDown2Box_16_C(const uint16_t* src_ptr,
                            ptrdiff_t src_stride,
                            uint16_t* dst,
                            int dst_width);
+void ScaleRowDown2Box_16_Odd_C(const uint16_t* src_ptr,
+                                ptrdiff_t src_stride,
+                                uint16_t* dst,
+                                int dst_width);
 void ScaleRowDown4_C(const uint8_t* src_ptr,
                      ptrdiff_t src_stride,
                      uint8_t* dst,
@@ -567,6 +572,10 @@ void ScaleRowDown2Box_AVX2(const uint8_t* src_ptr,
                            ptrdiff_t src_stride,
                            uint8_t* dst_ptr,
                            int dst_width);
+void ScaleRowDown2Box_16_AVX2(const uint16_t* src_ptr,
+                                ptrdiff_t src_stride,
+                                uint16_t* dst_ptr,
+                                int dst_width);
 void ScaleRowDown4_SSSE3(const uint8_t* src_ptr,
                          ptrdiff_t src_stride,
                          uint8_t* dst_ptr,
@@ -754,6 +763,14 @@ void ScaleRowDown2Box_Odd_AVX2(const uint8_t* src_ptr,
                                ptrdiff_t src_stride,
                                uint8_t* dst_ptr,
                                int dst_width);
+void ScaleRowDown2Box_16_Any_AVX2(const uint16_t* src_ptr,
+                                ptrdiff_t src_stride,
+                                uint16_t* dst_ptr,
+                                int dst_width);
+void ScaleRowDown2Box_16_Odd_AVX2(const uint16_t* src_ptr,
+                                ptrdiff_t src_stride,
+                                uint16_t* dst_ptr,
+                                int dst_width);
 void ScaleRowDown4_Any_SSSE3(const uint8_t* src_ptr,
                              ptrdiff_t src_stride,
                              uint8_t* dst_ptr,

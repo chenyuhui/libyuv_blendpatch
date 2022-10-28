@@ -3152,6 +3152,63 @@ void BlendPlaneRow_C(const uint8_t* src0,
     dst[0] = UBLEND(src0[0], src1[0], alpha[0]);
   }
 }
+
+void BlendPlaneRowW_C(const uint8_t* src0,
+                        const uint8_t* src1,
+                        uint8_t alpha,
+                        uint8_t* dst,
+                        int width) {
+    int x;
+    for (x = 0; x < width - 1; x += 2) {
+        dst[0] = UBLEND(src0[0], src1[0], alpha);
+        dst[1] = UBLEND(src0[1], src1[1], alpha);
+        src0 += 2;
+        src1 += 2;
+        dst += 2;
+    }
+    if (width & 1) {
+        dst[0] = UBLEND(src0[0], src1[0], alpha);
+    }
+}
+#undef UBLEND
+
+#define UBLEND(f, b, a) ((uint32_t(a)*f) + (uint32_t(65535 - a) * b) + 65535) >> 16
+void BlendPlaneRow_16_C(const uint16_t* src0,
+                            const uint16_t* src1,
+                            const uint16_t* alpha,
+                            uint16_t* dst,
+                            int width) {
+    int x;
+    for (x = 0; x < width - 1; x += 2) {
+        dst[0] = UBLEND(src0[0], src1[0], alpha[0]);
+        dst[1] = UBLEND(src0[1], src1[1], alpha[1]);
+        src0 += 2;
+        src1 += 2;
+        alpha += 2;
+        dst += 2;
+    }
+    if (width & 1) {
+        dst[0] = UBLEND(src0[0], src1[0], alpha[0]);
+    }
+}
+
+void BlendPlaneRowW_16_C(const uint16_t* src0,
+    const uint16_t* src1,
+    uint16_t alpha,
+    uint16_t* dst,
+    int width) {
+    int x;
+    for (x = 0; x < width - 1; x += 2) {
+        dst[0] = UBLEND(src0[0], src1[0], alpha);
+        dst[1] = UBLEND(src0[1], src1[1], alpha);
+        src0 += 2;
+        src1 += 2;
+        dst += 2;
+    }
+    if (width & 1) {
+        dst[0] = UBLEND(src0[0], src1[0], alpha);
+    }
+}
 #undef UBLEND
 
 #if defined(__aarch64__) || defined(__arm__)

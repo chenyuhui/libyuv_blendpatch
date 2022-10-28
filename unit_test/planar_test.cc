@@ -1383,6 +1383,242 @@ TEST_F(LibYUVPlanarTest, I420Blend_Invert) {
                 disable_cpu_flags_, benchmark_cpu_info_, -1, 0);
 }
 
+static void TestI420BlendW(int width,
+    int height,
+    int benchmark_iterations,
+    int disable_cpu_flags,
+    int benchmark_cpu_info,
+    int invert,
+    int off) {
+    width = ((width) > 0) ? (width) : 1;
+    const int kStrideUV = SUBSAMPLE(width, 2);
+    const int kSizeUV = kStrideUV * SUBSAMPLE(height, 2);
+    align_buffer_page_end(src_y0, width * height + off);
+    align_buffer_page_end(src_u0, kSizeUV + off);
+    align_buffer_page_end(src_v0, kSizeUV + off);
+    align_buffer_page_end(src_y1, width * height + off);
+    align_buffer_page_end(src_u1, kSizeUV + off);
+    align_buffer_page_end(src_v1, kSizeUV + off);
+    align_buffer_page_end(src_a, width * height + off);
+    align_buffer_page_end(dst_y_c, width * height + off);
+    align_buffer_page_end(dst_u_c, kSizeUV + off);
+    align_buffer_page_end(dst_v_c, kSizeUV + off);
+    align_buffer_page_end(dst_y_opt, width * height + off);
+    align_buffer_page_end(dst_u_opt, kSizeUV + off);
+    align_buffer_page_end(dst_v_opt, kSizeUV + off);
+
+    MemRandomize(src_y0, width * height + off);
+    MemRandomize(src_u0, kSizeUV + off);
+    MemRandomize(src_v0, kSizeUV + off);
+    MemRandomize(src_y1, width * height + off);
+    MemRandomize(src_u1, kSizeUV + off);
+    MemRandomize(src_v1, kSizeUV + off);
+    MemRandomize(src_a, width * height + off);
+    memset(dst_y_c, 255, width * height + off);
+    memset(dst_u_c, 255, kSizeUV + off);
+    memset(dst_v_c, 255, kSizeUV + off);
+    memset(dst_y_opt, 255, width * height + off);
+    memset(dst_u_opt, 255, kSizeUV + off);
+    memset(dst_v_opt, 255, kSizeUV + off);
+
+    MaskCpuFlags(disable_cpu_flags);
+    I420BlendW(src_y0 + off, width, src_u0 + off, kStrideUV, src_v0 + off,
+        kStrideUV, src_y1 + off, width, src_u1 + off, kStrideUV,
+        src_v1 + off, kStrideUV, src_a[off], dst_y_c + off, width,
+        dst_u_c + off, kStrideUV, dst_v_c + off, kStrideUV, width,
+        invert * height);
+    MaskCpuFlags(benchmark_cpu_info);
+    for (int i = 0; i < benchmark_iterations; ++i) {
+        I420BlendW(src_y0 + off, width, src_u0 + off, kStrideUV, src_v0 + off,
+            kStrideUV, src_y1 + off, width, src_u1 + off, kStrideUV,
+            src_v1 + off, kStrideUV, src_a[off], dst_y_opt + off,
+            width, dst_u_opt + off, kStrideUV, dst_v_opt + off, kStrideUV,
+            width, invert * height);
+    }
+    for (int i = 0; i < width * height; ++i) {
+        EXPECT_EQ(dst_y_c[i + off], dst_y_opt[i + off]);
+    }
+    for (int i = 0; i < kSizeUV; ++i) {
+        EXPECT_EQ(dst_u_c[i + off], dst_u_opt[i + off]);
+        EXPECT_EQ(dst_v_c[i + off], dst_v_opt[i + off]);
+    }
+    free_aligned_buffer_page_end(src_y0);
+    free_aligned_buffer_page_end(src_u0);
+    free_aligned_buffer_page_end(src_v0);
+    free_aligned_buffer_page_end(src_y1);
+    free_aligned_buffer_page_end(src_u1);
+    free_aligned_buffer_page_end(src_v1);
+    free_aligned_buffer_page_end(src_a);
+    free_aligned_buffer_page_end(dst_y_c);
+    free_aligned_buffer_page_end(dst_u_c);
+    free_aligned_buffer_page_end(dst_v_c);
+    free_aligned_buffer_page_end(dst_y_opt);
+    free_aligned_buffer_page_end(dst_u_opt);
+    free_aligned_buffer_page_end(dst_v_opt);
+}
+
+static void TestI420Blend_16(int width,
+    int height,
+    int benchmark_iterations,
+    int disable_cpu_flags,
+    int benchmark_cpu_info,
+    int invert,
+    int off) {
+    width = ((width) > 0) ? (width) : 1;
+    const int kStrideUV = SUBSAMPLE(width, 2);
+    const int kSizeUV = kStrideUV * SUBSAMPLE(height, 2) * 2;
+    align_buffer_page_end(src_y0, width * height * 2 + off);
+    align_buffer_page_end(src_u0, kSizeUV + off);
+    align_buffer_page_end(src_v0, kSizeUV + off);
+    align_buffer_page_end(src_y1, width * height * 2 + off);
+    align_buffer_page_end(src_u1, kSizeUV + off);
+    align_buffer_page_end(src_v1, kSizeUV + off);
+    align_buffer_page_end(src_a, width * height * 2 + off);
+    align_buffer_page_end(dst_y_c, width * height * 2 + off);
+    align_buffer_page_end(dst_u_c, kSizeUV + off);
+    align_buffer_page_end(dst_v_c, kSizeUV + off);
+    align_buffer_page_end(dst_y_opt, width * height * 2 + off);
+    align_buffer_page_end(dst_u_opt, kSizeUV + off);
+    align_buffer_page_end(dst_v_opt, kSizeUV + off);
+
+    MemRandomize(src_y0, width * height * 2 + off);
+    MemRandomize(src_u0, kSizeUV + off);
+    MemRandomize(src_v0, kSizeUV + off);
+    MemRandomize(src_y1, width * height * 2 + off);
+    MemRandomize(src_u1, kSizeUV + off);
+    MemRandomize(src_v1, kSizeUV + off);
+    MemRandomize(src_a, width * height * 2 + off);
+    memset(dst_y_c, 255, width * height * 2 + off);
+    memset(dst_u_c, 255, kSizeUV + off);
+    memset(dst_v_c, 255, kSizeUV + off);
+    memset(dst_y_opt, 255, width * height * 2 + off);
+    memset(dst_u_opt, 255, kSizeUV + off);
+    memset(dst_v_opt, 255, kSizeUV + off);
+
+    MaskCpuFlags(disable_cpu_flags);
+    I420Blend_16((uint16_t*)(src_y0 + off), width, (uint16_t*)(src_u0 + off), kStrideUV, (uint16_t*)(src_v0 + off),
+        kStrideUV, (uint16_t*)(src_y1 + off), width, (uint16_t*)(src_u1 + off), kStrideUV,
+        (uint16_t*)(src_v1 + off), kStrideUV, (uint16_t*)(src_a + off), width, (uint16_t*)(dst_y_c + off), width,
+            (uint16_t*)(dst_u_c + off), kStrideUV, (uint16_t*)(dst_v_c + off), kStrideUV, width,
+        invert * height);
+    MaskCpuFlags(benchmark_cpu_info);
+    for (int i = 0; i < benchmark_iterations; ++i) {
+        I420Blend_16((uint16_t*)(src_y0 + off), width, (uint16_t*)(src_u0 + off), kStrideUV, (uint16_t*)(src_v0 + off),
+            kStrideUV, (uint16_t*)(src_y1 + off), width, (uint16_t*)(src_u1 + off), kStrideUV,
+            (uint16_t*)(src_v1 + off), kStrideUV, (uint16_t*)(src_a + off), width, (uint16_t*)(dst_y_opt + off),
+            width, (uint16_t*)(dst_u_opt + off), kStrideUV, (uint16_t*)(dst_v_opt + off), kStrideUV,
+            width, invert * height);
+    }
+    for (int i = 0; i < width * height * 2; ++i) {
+        EXPECT_EQ(dst_y_c[i + off], dst_y_opt[i + off]);
+    }
+    for (int i = 0; i < kSizeUV; ++i) {
+        EXPECT_EQ(dst_u_c[i + off], dst_u_opt[i + off]);
+        EXPECT_EQ(dst_v_c[i + off], dst_v_opt[i + off]);
+    }
+    free_aligned_buffer_page_end(src_y0);
+    free_aligned_buffer_page_end(src_u0);
+    free_aligned_buffer_page_end(src_v0);
+    free_aligned_buffer_page_end(src_y1);
+    free_aligned_buffer_page_end(src_u1);
+    free_aligned_buffer_page_end(src_v1);
+    free_aligned_buffer_page_end(src_a);
+    free_aligned_buffer_page_end(dst_y_c);
+    free_aligned_buffer_page_end(dst_u_c);
+    free_aligned_buffer_page_end(dst_v_c);
+    free_aligned_buffer_page_end(dst_y_opt);
+    free_aligned_buffer_page_end(dst_u_opt);
+    free_aligned_buffer_page_end(dst_v_opt);
+}
+
+static void TestI420BlendW_16(int width,
+    int height,
+    int benchmark_iterations,
+    int disable_cpu_flags,
+    int benchmark_cpu_info,
+    int invert,
+    int off) {
+    width = ((width) > 0) ? (width) : 1;
+    const int kStrideUV = SUBSAMPLE(width, 2);
+    const int kSizeUV = kStrideUV * SUBSAMPLE(height, 2) * 2;
+    align_buffer_page_end(src_y0, width * height * 2 + off);
+    align_buffer_page_end(src_u0, kSizeUV + off);
+    align_buffer_page_end(src_v0, kSizeUV + off);
+    align_buffer_page_end(src_y1, width * height * 2 + off);
+    align_buffer_page_end(src_u1, kSizeUV + off);
+    align_buffer_page_end(src_v1, kSizeUV + off);
+    align_buffer_page_end(src_a, width * height * 2 + off);
+    align_buffer_page_end(dst_y_c, width * height * 2 + off);
+    align_buffer_page_end(dst_u_c, kSizeUV + off);
+    align_buffer_page_end(dst_v_c, kSizeUV + off);
+    align_buffer_page_end(dst_y_opt, width * height * 2 + off);
+    align_buffer_page_end(dst_u_opt, kSizeUV + off);
+    align_buffer_page_end(dst_v_opt, kSizeUV + off);
+
+    MemRandomize(src_y0, width * height * 2 + off);
+    MemRandomize(src_u0, kSizeUV + off);
+    MemRandomize(src_v0, kSizeUV + off);
+    MemRandomize(src_y1, width * height * 2 + off);
+    MemRandomize(src_u1, kSizeUV + off);
+    MemRandomize(src_v1, kSizeUV + off);
+    MemRandomize(src_a, width * height * 2 + off);
+    memset(dst_y_c, 255, width * height * 2 + off);
+    memset(dst_u_c, 255, kSizeUV + off);
+    memset(dst_v_c, 255, kSizeUV + off);
+    memset(dst_y_opt, 255, width * height * 2 + off);
+    memset(dst_u_opt, 255, kSizeUV + off);
+    memset(dst_v_opt, 255, kSizeUV + off);
+
+    MaskCpuFlags(disable_cpu_flags);
+    I420BlendW_16((uint16_t*)(src_y0 + off), width, (uint16_t*)(src_u0 + off), kStrideUV, (uint16_t*)(src_v0 + off),
+        kStrideUV, (uint16_t*)(src_y1 + off), width, (uint16_t*)(src_u1 + off), kStrideUV,
+        (uint16_t*)(src_v1 + off), kStrideUV, *((uint16_t*)(src_a + off)), (uint16_t*)(dst_y_c + off), width,
+            (uint16_t*)(dst_u_c + off), kStrideUV, (uint16_t*)(dst_v_c + off), kStrideUV, width,
+        invert * height);
+    MaskCpuFlags(benchmark_cpu_info);
+    for (int i = 0; i < benchmark_iterations; ++i) {
+        I420BlendW_16((uint16_t*)(src_y0 + off), width, (uint16_t*)(src_u0 + off), kStrideUV, (uint16_t*)(src_v0 + off),
+            kStrideUV, (uint16_t*)(src_y1 + off), width, (uint16_t*)(src_u1 + off), kStrideUV,
+            (uint16_t*)(src_v1 + off), kStrideUV, *((uint16_t*)(src_a + off)), (uint16_t*)(dst_y_opt + off),
+            width, (uint16_t*)(dst_u_opt + off), kStrideUV, (uint16_t*)(dst_v_opt + off), kStrideUV,
+            width, invert * height);
+    }
+    for (int i = 0; i < width * height * 2; ++i) {
+        EXPECT_EQ(dst_y_c[i + off], dst_y_opt[i + off]);
+    }
+    for (int i = 0; i < kSizeUV; ++i) {
+        EXPECT_EQ(dst_u_c[i + off], dst_u_opt[i + off]);
+        EXPECT_EQ(dst_v_c[i + off], dst_v_opt[i + off]);
+    }
+    free_aligned_buffer_page_end(src_y0);
+    free_aligned_buffer_page_end(src_u0);
+    free_aligned_buffer_page_end(src_v0);
+    free_aligned_buffer_page_end(src_y1);
+    free_aligned_buffer_page_end(src_u1);
+    free_aligned_buffer_page_end(src_v1);
+    free_aligned_buffer_page_end(src_a);
+    free_aligned_buffer_page_end(dst_y_c);
+    free_aligned_buffer_page_end(dst_u_c);
+    free_aligned_buffer_page_end(dst_v_c);
+    free_aligned_buffer_page_end(dst_y_opt);
+    free_aligned_buffer_page_end(dst_u_opt);
+    free_aligned_buffer_page_end(dst_v_opt);
+}
+
+
+TEST_F(LibYUVPlanarTest, I420BlendW_Opt) {
+    TestI420BlendW(benchmark_width_, benchmark_height_, benchmark_iterations_,
+        disable_cpu_flags_, benchmark_cpu_info_, +1, 0);
+}
+TEST_F(LibYUVPlanarTest, I420Blend_16_Opt) {
+    TestI420Blend_16(benchmark_width_, benchmark_height_, benchmark_iterations_,
+        disable_cpu_flags_, benchmark_cpu_info_, +1, 0);
+}
+TEST_F(LibYUVPlanarTest, I420BlendW_16_Opt) {
+    TestI420BlendW_16(benchmark_width_, benchmark_height_, benchmark_iterations_,
+        disable_cpu_flags_, benchmark_cpu_info_, +1, 0);
+}
+
 TEST_F(LibYUVPlanarTest, TestAffine) {
   SIMD_ALIGNED(uint8_t orig_pixels_0[1280][4]);
   SIMD_ALIGNED(uint8_t interpolate_pixels_C[1280][4]);

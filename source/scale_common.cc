@@ -160,6 +160,30 @@ void ScaleRowDown2Box_16_C(const uint16_t* src_ptr,
   }
 }
 
+void ScaleRowDown2Box_16_Odd_C(const uint16_t* src_ptr,
+                                ptrdiff_t src_stride,
+                                uint16_t* dst,
+                                int dst_width) {
+    const uint16_t* s = src_ptr;
+    const uint16_t* t = src_ptr + src_stride;
+    int x;
+    dst_width -= 1;
+    for (x = 0; x < dst_width - 1; x += 2) {
+        dst[0] = (s[0] + s[1] + t[0] + t[1] + 2) >> 2;
+        dst[1] = (s[2] + s[3] + t[2] + t[3] + 2) >> 2;
+        dst += 2;
+        s += 4;
+        t += 4;
+    }
+    if (dst_width & 1) {
+        dst[0] = (s[0] + s[1] + t[0] + t[1] + 2) >> 2;
+        dst += 1;
+        s += 2;
+        t += 2;
+    }
+    dst[0] = (s[0] + t[0] + 1) >> 1;
+}
+
 void ScaleRowDown4_C(const uint8_t* src_ptr,
                      ptrdiff_t src_stride,
                      uint8_t* dst,
